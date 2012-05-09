@@ -1,0 +1,522 @@
+<?php
+/**
+* Dejavu.module
+*
+* Main module file for Dejavu helper module.
+*
+* @package Dejavu
+* @author Anil Maharjan
+* @version 1.0
+* @copyright anil@anilmaharjan.com.np
+* 
+**/
+
+
+/**
+* MENU_ITEM_SEPARATOR 
+* 
+* Default Separator for the menu
+*
+**/
+define('MENU_ITEM_SEPARATOR','');
+
+/**
+* MENU_ITEM_WRAPPER 
+* 
+* Default item wrapper for the menu
+*
+**/
+define('MENU_ITEM_WRAPPER','');
+
+/**
+* MENU_HASH_FRONT 
+* 
+* Convert <front> to hash in href attribute
+*
+**/
+define('MENU_HASH_FRONT',false); 
+
+define('CURRENT_THEME_NAME','chhimek');
+define('CUSTOM_MODULE_NAME','chhimek');
+
+/**
+* USED ON PROJECT CICAD 
+* 
+* GET tid of the page from field_category
+* @return Integer $tid Taxonomy Term ID
+*
+**/
+function dejavu_get_page_category(){
+	if($nid = is_node_page()){
+		$node = node_load($nid);	
+		if(property_exists($node,'field_category')){
+			$tid = $node->field_category['und'][0]['tid'];
+			return $tid;
+		}
+		else
+			return false;
+	}elseif($tid = is_news_page()){
+		$tid = ($tid!='all')?$tid:1;
+		$term = taxonomy_term_load($tid);
+		//print_r($term);
+		return $term->tid;	
+	}
+}
+/**
+* Site Name 
+* 
+* Gets the sitename from the Variables table
+* @return String Site Name
+*
+**/
+function dejavu_site_name(){
+	return variable_get('site_name','Website');	
+}
+/**
+* Path Match
+* 
+* Has a bug that crashes Token Module need to fix that
+*
+* @todo Need to fix the token module bug due to use of preg_match
+**/
+function dejavu_path_match($path){
+	$path = str_replace('/','\/',$path);
+	$path = str_replace('.','\.',$path);
+	$path = str_replace('*','(.*)',$path);
+	//echo $path;
+	/*if(preg_match('/'.$path.'/',request_uri(),&$matches)){
+		$frag = explode($matches[0],request_uri());
+		if(!$frag[1])
+			return true;
+		else
+			return false;	
+	}*/
+}
+
+/** 
+* dejavu_is_node_page()
+* 
+ * To get node ID of the current node if the page is a node page.  
+ * Else returns false
+ *
+ * @return $nid 
+ **/
+ function dejavu_is_node_page(){
+	$q = $_GET['q'];
+	$qarr = explode('/',$q);
+	return($qarr[0]=='node')?$qarr[1]:false;
+}
+
+
+/**
+ * get_node_types()
+ *
+ * Get a list of enabled node types.
+ * 
+ * @return Array Array of Node_types
+ **/
+function get_node_types(){
+	$sql = 'SELECT type,name FROM {node_type} WHERE disabled = 0';
+	return $results = db_query($sql);
+}
+
+/**
+* dejavu_is_ipad()
+*
+* Check if the client is iPad or an iPhone
+**/
+function dejavu_is_ipad(){
+	//die($_SERVER['HTTP_USER_AGENT']);
+	if((preg_match("/iPad/",$_SERVER['HTTP_USER_AGENT']) or (preg_match("/iPhone/",$_SERVER['HTTP_USER_AGENT'])) and preg_match("/Mobile/",$_SERVER['HTTP_USER_AGENT'])))
+		return true;
+	else
+		return false;
+}
+/**
+* Safe String
+*
+* replace spaces wid dashes and lowercase the given string to make it usable for urls. Reverse of dejavu_mr2hr()
+*
+* @param String Raw stirng with spaces and mixed case characters.
+* @return String Safe string with _ and lowercase characters.
+**/
+function dejavu_safe_str($string){
+	return str_replace(' ','-',strtolower(trim($string)));
+}
+/**
+* Machine Readable string to Human readable string 
+* 
+* reverse of dejavu_safe_str()
+*
+* @return String Human readable string with spaces and mixed case characters.
+* @param String Safe string with _ and lowercase characters.
+**/
+function dejavu_mr2hr($string){
+	return str_replace('_',' ',ucfirst(trim($string)));
+}
+
+function dejavu_get_keywords($string){
+      $stopWords = array('i','a','about','an','and','are','as','at','be','by','com','de','en','for','from','how','in','is','it','la','of','on','or','that','the','this','to','was','what','when','where','who','will','with','und','the','www');
+    
+      $string = preg_replace('/\s\s+/i', '', $string); // replace whitespace
+      $string = trim($string); // trim the string
+      $string = preg_replace('/[^a-zA-Z0-9 -]/', '', $string); // only take alphanumerical characters, but keep the spaces and dashes too…
+      $string = strtolower($string); // make it lowercase
+    
+      preg_match_all('/\b.*?\b/i', $string, $matchWords);
+      $matchWords = $matchWords[0];
+       
+      foreach ( $matchWords as $key=>$item ) {
+          if ( $item == '' || in_array(strtolower($item), $stopWords) || strlen($item) <= 3 || is_numeric($item)) {
+              unset($matchWords[$key]);
+          }
+      }  
+      $wordCountArr = array();
+      if ( is_array($matchWords) ) {
+          foreach ( $matchWords as $key => $val ) {
+              $val = strtolower($val);
+              if ( isset($wordCountArr[$val]) ) {
+                  $wordCountArr[$val]++;
+              } else {
+                  $wordCountArr[$val] = 1;
+              }
+          }
+      }
+      arsort($wordCountArr);
+      $wordCountArr = array_slice($wordCountArr, 0, 10);
+      return array_keys($wordCountArr);
+}
+/**
+* Language Prefix
+*
+* language prefix of current language 
+*
+* @return '' for default language
+* @todo For sites which will require language prefix on url for default language wont work so need a fix.
+**/
+ 
+
+function dejavu_language_prefix(){ 
+	global $language; 
+	$default_lang =  language_default(); 
+	return $default_lang->language ==  $language->language ? "" : $language->language."/"; 
+} 
+/**
+ * Add language prefix on the url 
+ * @return '' for default language
+ **/
+function dejavu_base_url(){
+	global $base_url;
+	return $base_url.'/'.dejavu_language_prefix();	
+}
+function dejavu_path($of){
+	global $language;
+	global $base_url;
+	$theme = $base_url.'/'.drupal_get_path('theme',CURRENT_THEME_NAME);
+	$module = $base_url.'/'.drupal_get_path('module',CUSTOM_MODULE_NAME);
+	$public = $base_url.'/sites/default/files';	
+	return $$of;
+}
+function dejavu_file_path($wrapped_uri){
+	return str_replace('public:/',dejavu_path('public'),$wrapped_uri);
+}
+function dejavu_xpath($of){
+	global $language;
+	$links = language_negotiation_get_switch_links('language', $of);
+	if($links){
+		$alias = drupal_lookup_path('alias',$links->links[$language->language]['href'], $language->language);
+	}
+	return $alias?dejavu_base_url().$alias:dejavu_base_url().$of;
+}
+function dejavu_download_page(){
+	//echo $_GET['f']; die;
+	$file = 'sites/default/files/'.$_GET['f'];
+	if(preg_match("/sites\/default\/files\/(.*)/",$file)){
+		$file_arr = explode(".",$_GET['f']);
+		$file_type = $file_arr[count($file_arr)-1];
+		if(!file_exists($file)){
+			die($file.'Error: File not found.');
+		}
+		else{
+			// Set headers
+			header("Cache-Control: public");
+			header("Content-Description: File Transfer");
+			header('Content-Disposition: attachment; filename="'.safe_str(dejavu_site_name()).'_download_'.safe_str($_GET['f']).rand(0,15000).'.'.$file_type.'"');
+			header("Content-Type: ".$file_type."/application");
+			header("Content-Transfer-Encoding: binary");
+			readfile($file);
+		}
+		die;
+	}
+	
+}
+/**
+*
+*Hook Menu
+*
+**/
+function dejavu_menu() {
+	global $language;
+	$items['download'] = array(
+		'title' => 'Download', 
+		'description' => 'Download file.', 
+		'page callback' => 'dejavu_download_page', 
+		'access arguments' => array('access content'), 
+		'type' =>  MENU_CALLBACK
+	);
+	$items['admin/content/misc'] = array(
+	  'title' => t('Misc Admin Settings'),
+	  'page callback' => 'drupal_get_form',
+	  'page arguments' => array('dejavu_misc_admin_setting_form'),
+	  'description' => t('Modify misc contents'),
+	  'access arguments' => array('administer site configuration'),
+	  'type' => MENU_NORMAL_ITEM,
+	  'file' => 'dejavu.admin.inc'
+	);
+	$items['admin/content/misc_l'] = array(
+	  'title' => t('Misc Admin Settings(Language Dependent)'),
+	  'page callback' => 'drupal_get_form',
+	  'page arguments' => array('dejavu_misc_admin_l_setting_form'),
+	  'description' => t('Modify misc contents language dependent'),
+	  'access arguments' => array('administer site configuration'),
+	  'type' => MENU_NORMAL_ITEM,
+	  'file' => 'dejavu.l.admin.inc'
+	);
+	
+	return $items;
+}
+
+/**
+* Renders a block into an html 
+*
+* dejavu_block_render($module, $block_id);
+*
+* @param ModuleDelta $module Machine readable string of module name(Delta)
+* @param BlockDelta $block_id Machine readable string of Block name(Delta)
+* @return String
+*
+**/
+function dejavu_block_render($module, $block_id) {
+  $block = block_load($module, $block_id);
+  $block_content = _block_render_blocks(array($block));
+  $build = _block_get_renderable_array($block_content);
+  $block_rendered = drupal_render($build);
+  return $block_rendered;
+}
+
+/**
+* Renders a menu into an HTML 
+* 
+* @since 1.0
+* @uses _dejavu_tree_output()
+* @param    string   $menu    the delta of the menu to be rendered
+* @param    bool   $hash_front    true will convert the link to the frontpage into '#'
+* @param    string   $separator    Separator between the menu items eg '|'
+* @param    string   $menu_item_wrapper    Wrapper element for each item text. Eg: 'strong' will wrap around the menu item text with <strong> tag
+* @param    string   $main_wrapper_class    Class for Container DIV default will be menu delta
+* @param    string   $ul_class    Class for UL tag default will be menu_delta-ul
+* @return   string                HTML for a menu.
+* 
+**/
+function dejavu_render_menu($menu='main-menu', $hash_front = false, $separator = NULL, $menu_item_wrapper = NULL,$main_wrapper_class = NULL ,$ul_class = NULL){
+	$separator = $separator?$separator:MENU_ITEM_SEPARATOR;
+	$menu_item_wrapper = $menu_item_wrapper?$menu_item_wrapper:MENU_ITEM_WRAPPER;
+	$main_wrapper_class = $main_wrapper_class?$main_wrapper_class:$menu;
+	$ul_class = $ul_class?$ul_class:$menu.'-ul';
+	
+	$tree = menu_tree_page_data($menu);
+	//print_r($tree);die;
+	$html = '
+	<div class="'.$main_wrapper_class.'">
+	<ul class="'.$ul_class.'">
+	';
+	$min_weight = 999999;
+	$index = 0;
+	$length = count($tree);
+	foreach($tree as $key=>$val)
+		if($val['link']['weight']<$min_weight)
+	$min_weight = $val['link']['weight'];
+	foreach($tree as $key=>$val){
+		$index++;
+		if($index==$length){$val['last']=true;}
+		if($val['link']['hidden'])
+			continue;
+	 $html .= _dejavu_tree_output($val,$min_weight, $hash_front, $separator, $menu_item_wrapper);
+	}
+	$html .= "
+	</ul>
+	</div>
+	";
+	//print('<pre>'.$html);die;
+	return $html;
+}
+/**
+* Renders a menu tree into HTML 
+* 
+* @uses _dejavu_tree_child_output()
+* 
+**/
+function _dejavu_tree_output($link,$first, $hash_front = false, $separator = NULL, $menu_item_wrapper = NULL){
+
+	global $language, $base_url;
+	$slash = "";
+	$class = 'ml-'.$link['link']['mlid'];
+	if(isset($link['last'])){
+		$class .= " last";
+	}
+	/*print "<pre>";
+	print_r($link);
+	print "</pre>";*/
+	
+	$arg0 = arg(0);
+	$aclass = '';
+	if($link['link']['in_active_trail']==1)
+		$class .=" active";
+		if(isset($link['below'])){
+			foreach($link['below'] as $below){
+				if(isset($arg0) && $arg0!='' && ($arg0==$below['link']['link_path'])){
+					{$class .=" active";
+					$aclass = "proactive";
+					break;}
+				}
+			}
+		}
+	
+	if($first == $link['link']['weight'])
+		$class .=" first";
+	else $slash = $separator;
+	$title = $link['link']['link_title'];
+	$path = $link['link']['link_path'];
+	$murl = drupal_lookup_path('alias',$path, $language->language);
+	if($path=='<front>'){
+			if($hash_front)
+				$path = '#';
+			else
+				$path = '';
+		}
+	if($murl=="")
+			$murl = $path;
+	$html = '
+	<li class="'.$class.'">'.$slash;
+	if($murl!=='#'){
+		$html .= '<a class="'.$aclass.'" href="'.$base_url."/";
+		$html .= ($language->prefix)?($language->prefix)."/":"";
+		$html .= $murl.'">';
+		$html .= $menu_item_wrapper ? '<'.$menu_item_wrapper.'>':'';
+		$html .= t($title);
+		$html .= $menu_item_wrapper?'</'.$menu_item_wrapper.'>':'';
+		$html .= '</a>';
+	}else{
+		$html .= '<a class="'.$aclass.'" href="#">';
+		$html .= $menu_item_wrapper ? '<'.$menu_item_wrapper.'>':'';
+		$html .= t($title);
+		$html .= $menu_item_wrapper?'</'.$menu_item_wrapper.'>':'';
+		$html .= '</a>';
+	}
+	if($link['below'] && count($link['below'])>0){
+		
+		$html .= _dejavu_tree_child_output($link, $hash_front, $separator, $menu_item_wrapper);
+	}
+	$html .='
+	</li>';
+	
+	return $html;
+}
+
+function _dejavu_tree_child_output($link, $hash_front = false, $separator = NULL, $menu_item_wrapper = NULL){
+	global $language, $base_url;
+	$slash = "";
+	$html = '<ul class="childNav">';
+	$min_weight = 999999;
+	foreach($link['below'] as $key=>$val)
+		if($val['link']['hidden'])
+			continue;
+	  	if($val['link']['weight']<$min_weight)
+			$min_weight = $val['link']['weight'];
+	foreach($link['below'] as $val){
+		if($val['link']['hidden'])
+			continue;
+		$title = $val['link']['link_title'];
+		$path = $val['link']['link_path'];
+		$murl = drupal_lookup_path('alias',$path, $language->language);
+		if($path=='<front>'){
+			if($hash_front)
+				$path = '#';
+			else
+				$path = '';
+		}
+		if($murl=="")
+			$murl = $path;
+		//$class = "leaf ";
+		$aclass = '';
+		$class = 'ml-'.$val['link']['mlid'];
+		if($min_weight==$val['link']['weight']){
+			$class .=" first";
+			$min_weight="What ?? First?? Now way!! :D";
+		}
+		else{
+		$slash = $separator;	
+		}
+		
+		if($val['link']['in_active_trail']==1 || preg_match('/'.addslashes(urlencode($murl)).'/',addslashes(request_uri())))
+		{
+			$class .=" active";
+			$aclass = "proactive";
+		}
+		//elseif()
+		//$class .=" active";
+		//die($murl);
+		$html .= '
+		<li class="'.$class.'">'.$slash;
+		if($murl!=='#'){
+			if(preg_match("/^(http)/",$murl)){
+					$html .='<a target="_blank" href="'.$murl.'" >';
+					$html .= $menu_item_wrapper ? '<'.$menu_item_wrapper.'>':'';
+					$html .= t($title);
+					$html .= $menu_item_wrapper?'</'.$menu_item_wrapper.'>':'';
+					$html .= '</a>';
+				}else{
+					$html .= '<a class="'.$aclass.'" href="'.$base_url."/";
+					$html .= ($language->prefix)?($language->prefix)."/":"";
+					$html .= $murl.'">';
+					$html .= $menu_item_wrapper ? '<'.$menu_item_wrapper.'>':'';
+					$html .= t($title);
+					$html .= $menu_item_wrapper?'</'.$menu_item_wrapper.'>':'';
+					$html .= '</a>';
+				}
+		}
+		
+			
+		else{
+			$html .= '<a href="#">';
+			$html .= $menu_item_wrapper ? '<'.$menu_item_wrapper.'>':'';
+			$html .= t($title);
+			$html .= $menu_item_wrapper?'</'.$menu_item_wrapper.'>':'';
+			$html .= '</a>';
+		}
+		
+		if($val['below'] && count($val['below'])>0){
+		$html .= dejavu_tree_child_output($val, $hash_front, $separator, $menu_item_wrapper);
+		}
+		$html.='
+		</li>';
+	}
+	$html .="
+	</ul>";
+	return $html;
+}
+
+/**
+* Get translated node ID from a tnid 
+* 
+* @since 1.0
+* 
+* @param    Integer   $tnid    The translation node id
+* @return   Integer                Translation node id.
+* 
+**/
+function dejavu_get_translated_nid($tnid){
+global $language;
+$trans = translation_node_get_translations($tnid);
+return $trans[$language->language]->nid;
+}

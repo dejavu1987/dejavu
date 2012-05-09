@@ -1,0 +1,4 @@
+name = Dejavu
+description = Custom Helper Module.
+core = 7.x
+package = Helper Modules
