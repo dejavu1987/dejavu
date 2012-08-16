@@ -563,5 +563,4 @@ function dejavu_bapachya($title){
             $new_title = $title;
         }
 	return $new_title; 
-} 
 }
