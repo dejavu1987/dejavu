@@ -40,6 +40,31 @@ define('CURRENT_THEME_NAME','chhimek');
 define('CUSTOM_MODULE_NAME','chhimek');
 
 /**
+* Get non empty elements of an array 
+* 
+* Filters out the empty elements from the array
+*
+* @return Array without empty elements.
+* @param Array with mixed elements.
+**/
+function dejavu_array_non_empty_items($input) {
+    // If it is an element, then just return it
+    if (!is_array($input)) {
+        return $input;
+    }
+    $non_empty_items = array();
+    foreach ($input as $key => $value) {
+        // Ignore empty cells
+        if ($value) {
+            // Use recursion to evaluate cells 
+            $non_empty_items[$key] = dejavu_array_non_empty_items($value);
+        }
+    }
+    // Finally return the array without empty items
+    return $non_empty_items;
+}
+
+/**
 * USED ON PROJECT CICAD 
 * 
 * GET tid of the page from field_category
@@ -506,8 +531,9 @@ function _dejavu_tree_child_output($link, $hash_front = false, $separator = NULL
 	return $html;
 }
 
+
 /**
-* Get translated node ID from a tnid 
+*Get translated node ID from a tnid 
 * 
 * @since 1.0
 * 
@@ -519,4 +545,24 @@ function dejavu_get_translated_nid($tnid){
 global $language;
 $trans = translation_node_get_translations($tnid);
 return $trans[$language->language]->nid;
+}
+
+/**
+* Bapachya
+*
+* Dual colored title . the title will be broken down when double space "  " is found.
+*
+* @return HTML for dual color title >> New <span class="sec-color">Title</span>
+* @todo Newly Introduced functions may require improvements.
+**/
+
+function dejavu_bapachya($title){ 
+        if(strpos($title, "  ")){
+            $array = explode("  ",$title);
+            $new_title = $array[0].' <span class="sec-color">'.$array[1]."</span>";
+        }else{
+            $new_title = $title;
+        }
+	return $new_title; 
+} 
 }
