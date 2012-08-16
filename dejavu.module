@@ -344,7 +344,8 @@ function dejavu_block_render($module, $block_id) {
 * 
 **/
 function dejavu_render_menu($menu='main-menu', $hash_front = false, $separator = NULL, $menu_item_wrapper = NULL,$main_wrapper_class = NULL ,$ul_class = NULL){
-	$separator = $separator?$separator:MENU_ITEM_SEPARATOR;
+    global $language;
+    $separator = $separator?$separator:MENU_ITEM_SEPARATOR;
 	$menu_item_wrapper = $menu_item_wrapper?$menu_item_wrapper:MENU_ITEM_WRAPPER;
 	$main_wrapper_class = $main_wrapper_class?$main_wrapper_class:$menu;
 	$ul_class = $ul_class?$ul_class:$menu.'-ul';
@@ -364,7 +365,7 @@ function dejavu_render_menu($menu='main-menu', $hash_front = false, $separator =
 	foreach($tree as $key=>$val){
 		$index++;
 		if($index==$length){$val['last']=true;}
-		if($val['link']['hidden'])
+		if($val['link']['hidden'] || ($val['link']['language'] != $language->language && $val['link']['language'] != 'und'))
 			continue;
 	 $html .= _dejavu_tree_output($val,$min_weight, $hash_front, $separator, $menu_item_wrapper);
 	}
@@ -382,7 +383,6 @@ function dejavu_render_menu($menu='main-menu', $hash_front = false, $separator =
 * 
 **/
 function _dejavu_tree_output($link,$first, $hash_front = false, $separator = NULL, $menu_item_wrapper = NULL){
-
 	global $language, $base_url;
 	$slash = "";
 	$class = 'ml-'.$link['link']['mlid'];
@@ -454,12 +454,12 @@ function _dejavu_tree_child_output($link, $hash_front = false, $separator = NULL
 	$html = '<ul class="childNav">';
 	$min_weight = 999999;
 	foreach($link['below'] as $key=>$val)
-		if($val['link']['hidden'])
+		if($val['link']['hidden']  || ($val['link']['language'] != $language->language && $val['link']['language'] != 'und'))
 			continue;
 	  	if($val['link']['weight']<$min_weight)
 			$min_weight = $val['link']['weight'];
 	foreach($link['below'] as $val){
-		if($val['link']['hidden'])
+		if($val['link']['hidden']  || ($val['link']['language'] != $language->language && $val['link']['language'] != 'und'))
 			continue;
 		$title = $val['link']['link_title'];
 		$path = $val['link']['link_path'];
@@ -530,7 +530,6 @@ function _dejavu_tree_child_output($link, $hash_front = false, $separator = NULL
 	</ul>";
 	return $html;
 }
-
 
 /**
 *Get translated node ID from a tnid 
